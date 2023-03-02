@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Entities>
+    <ExtensionPackages>
+        <ExtensionPackage
+                dependsOn=""
+                description=""
+                minimumThingWorxVersion="9.3.0"
+                name="twx.pdf.extension"
+                packageVersion="1.0.0"
+                vendor="">
+            <JarResources>
+            </JarResources>
+        </ExtensionPackage>
+    </ExtensionPackages>
+</Entities>

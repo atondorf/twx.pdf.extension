@@ -38,3 +38,5 @@ lib/common/*.jar
 *.zip
 *.tar.gz
 *.rar
+# Ignore Gradle build output directory
+build

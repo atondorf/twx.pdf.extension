@@ -1,0 +1,13 @@
+<Entities>
+  <Resources>
+    <Resource
+        name="ConcurrencyServices"
+        className="twx.core.concurrency.ConcurrencyServices"
+        description="Ressource providing basic queue and mutexes for Thingworx Services"
+        projectName="TWX.Core"
+        tags="TWX.Core:Service"
+        aspect.isEditableExtensionObject="false"
+        aspect.isCreatable="false"
+        />
+  </Resources>
+</Entities>

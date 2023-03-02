@@ -1,0 +1,130 @@
+plugins {
+    id 'java-library'
+    id 'distribution'
+}
+
+project.ext {
+    projectName     = rootProject.name + '.' + project.name
+    extensionJar    = projectName + '_' + rootProject.ext.base_version + '.jar'
+    zipName         = projectName + '_' + rootProject.ext.base_version + '.zip'
+    baseDir         = projectDir
+    uiDir           = "${baseDir}/ui"                     // if there are any widgets
+    configDir       = "${baseDir}/configfiles"            // folder location of the metadata.xml file
+    entitiesDir     = "${baseDir}/configfiles/Entities"   // folder additional Entities file that you want to be included in the extension
+    zipDir          = "${rootDir}/zip"                    // where to store the generated zip
+}
+
+dependencies {
+    // Use JUnit Jupiter for testing.
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
+    // this way you can get jars from a central repository ...
+    implementation group: 'org.json', name: 'json', version: '20171018'
+    implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+    
+    implementation fileTree(dir: rootProject.ext.commonJarDir, include: ['*.jar'])
+    packageDependencies fileTree(dir: rootProject.ext.localJarDir, include: ['*.jar'])
+}
+
+distributions {
+    main {
+        distributionBaseName = 'someName'
+        contents {
+            from 'configfiles'
+        }
+    }
+}
+
+tasks.named('jar') {
+    archiveFileName = extensionJar
+    manifest {
+        attributes(['Built-By'  : rootProject.ext.packageVendor,
+                    'Build-Date': new Date().format('yyyy-MM-dd HH:mm:ss')])
+        attributes(['Package-Title'  : rootProject.ext.packageTitle,
+                    'Package-Version': rootProject.ext.packageVersion,
+                    'Package-Vendor' : rootProject.ext.packageVendor], rootProject.ext.packageName)
+    }
+}
+
+def updateMetadata() {
+    def file = "${buildDir}/zip/metadata.xml"
+    def parser = new XmlParser()
+    def xml = parser.parse(file)
+    // update the version number to current one ...
+    xml.ExtensionPackages.ExtensionPackage.@packageVersion = rootProject.ext.base_version
+    xml.ExtensionPackages.ExtensionPackage.@name = projectName
+    // add dependency to own jar
+    xml.ExtensionPackages.ExtensionPackage.JarResources[0]?.appendNode('FileResource', [type: 'JAR', file: project.ext.extensionJar])
+
+    // add dependencies to required external jars
+    for (File f: configurations.packageDependencies) {
+        if (f.getName().startsWith('commons-codec') ||
+            f.getName().startsWith('commons-io') ||
+            f.getName().startsWith('commons-logging') ||
+            f.getName().startsWith('netty') ||
+            f.getName().startsWith('log4j') ||
+            f.getName().startsWith('httpclient') ||
+            f.getName().startsWith('httpcore') ||
+            f.getName().startsWith('slf4j')) {
+            continue
+        } // these are the default, provided by thingworx allready ...
+        xml.ExtensionPackages.ExtensionPackage.JarResources[0]?.appendNode('FileResource', [type: 'JAR', file: f.getName()])
+    }
+    PrintWriter pw = new PrintWriter(new File(file))
+    pw.write(groovy.xml.XmlUtil.serialize(xml))
+    pw.close()
+}
+
+tasks.register('twxPrepare') {
+    dependsOn   'jar'
+    group       'TWX Extension'
+    description 'Package all Extension files in ZIP-Folder'
+
+    doFirst {
+        delete fileTree(project.ext.zipDir).matching { include '**/*.zip' }
+        delete "${buildDir}/zip/"
+        // add here all the jars from the packageDependencies configuration
+        copy {
+            from configurations.packageDependencies
+            into "${buildDir}/zip/lib/common/"
+        }
+        // add the configuration
+        copy {
+            from "${project.ext.configDir}"
+            into "${buildDir}/zip/"
+        }
+        updateMetadata()
+        // add the extension jar itself
+        copy {
+            from "${buildDir}/libs/${project.ext.extensionJar}"
+            into "${buildDir}/zip/lib/common/"
+        }
+        // add the ui files
+        copy {
+            from uiDir
+            into "${buildDir}/zip/ui/"
+        }
+        copy {
+            from entitiesDir
+            into "${buildDir}/zip/Entities/"
+        }
+    }
+}
+
+task twxZip(type : Zip, dependsOn: twxPrepare) {
+    group = 'TWX Extension'
+    description = 'Package Extension to a single zip'
+
+    archiveFileName = zipName
+    destinationDirectory = new File(project.ext.zipDir)
+    from "${buildDir}/zip/"
+}
+
+tasks.named('distZip') {
+    println 'Distzip Config'
+}
+
+// overwrite test-task to use JUnit 5 ...
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
