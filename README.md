@@ -1,15 +1,25 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+This Thingworx Extension contains some helpers for concurrent operations and synchronisation.
+It's under development.
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+
 
 # Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+To build the extension, use gradle.
+The gradle scripts expect the Thingworx Libraries to be available in a parallel folder named "_twx_libraries_9".
+
+# Gradle Targets
+The gradle script contains some special targets for the Extension.
+- extVersion:    Increases the Version Number of the Extension by 0.0.1
+- extPrepare:    Compiles the java files and prepares the extension structure 
+- extZip:        Creates the extension zip-File
+- extTwxDelete:  Deletes the extension in the connected Thingworx Instance
+- extTwxInstall: Installs the extension in the connected Thingworx Instance
+
+To make use of (de)installation using gradle, ensure you setup the parameters:
+- thingworxServerRoot
+- thingworxAppKey
 
 # Contribute
 TODO: Explain how other users and developers can contribute to make your code better. 
