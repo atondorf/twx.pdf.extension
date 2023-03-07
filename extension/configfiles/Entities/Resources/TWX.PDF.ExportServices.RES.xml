@@ -1,9 +1,9 @@
 <Entities>
   <Resources>
     <Resource
-        name="ConcurrencyServices"
-        className="twx.core.concurrency.ConcurrencyServices"
-        description="Ressource providing basic queue and mutexes for Thingworx Services"
+        name="PDFExport"
+        className="twx.core.pdf.PDFExport"
+        description="Ressource providing pdf rendering of Mashups"
         projectName="TWX.Core"
         tags="TWX.Core:Service"
         aspect.isEditableExtensionObject="false"

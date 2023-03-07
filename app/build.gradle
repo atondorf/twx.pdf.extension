@@ -10,7 +10,7 @@ dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.+'
     implementation fileTree(dir: rootProject.ext.commonJarDir, include: ['*.jar'])
     implementation fileTree(dir: rootProject.ext.localJarDir, include: ['*.jar'])
-    implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.28.1'
+    implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
     implementation project(':extension')
 }
 

@@ -20,7 +20,8 @@ dependencies {
     // this way you can get jars from a central repository ...
     implementation group: 'org.json', name: 'json', version: '20171018'
     implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
-    
+    implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
+    packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
     implementation fileTree(dir: rootProject.ext.commonJarDir, include: ['*.jar'])
     packageDependencies fileTree(dir: rootProject.ext.localJarDir, include: ['*.jar'])
 }
@@ -64,6 +65,7 @@ def updateMetadata() {
             f.getName().startsWith('log4j') ||
             f.getName().startsWith('httpclient') ||
             f.getName().startsWith('httpcore') ||
+            f.getName().startsWith('gson') ||
             f.getName().startsWith('slf4j')) {
             continue
         } // these are the default, provided by thingworx allready ...
