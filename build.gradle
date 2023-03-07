@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+    id 'fr.brouillard.oss.gradle.jgitver' version '0.10.0-rc03'
+}
+
+jgitver {
+    autoIncrementPatch true
+    useDirty false
+}
+
+rootProject.ext {
+    localJarDir         = "${rootDir}/lib/local"    // if you have any jars that should be packed add them here
+    commonJarDir        = "${rootDir}/lib/common"   // if you have any jars that should not be packed add them here
+    packageVendor       = 'atondorf'                // MANIFEST.MF information
+    packageName         = project.name              // MANIFEST.MF information
+    packageTitle        = 'ThingWorxExtension'      // MANIFEST.MF information
+    packageVersion      = version
+}
+
+allprojects {
+    configurations {
+        packageDependencies
+        compile {
+            extendsFrom packageDependencies
+        }
+    }
+
+    repositories {
+        mavenCentral()
+        flatDir {
+            dirs rootProject.ext.commonJarDir
+        }
+        flatDir {
+            dirs rootProject.ext.localJarDir
+        }
+    }
+}
+
+tasks.register('versionInfo') {
+    doLast {
+        println 'Version: ' + version
+        println 'Base:    ' + rootProject.ext.base_version
+        println 'Major:   ' + rootProject.ext.current_version_major
+        println 'Minor:   ' + rootProject.ext.current_version_minor
+        println 'Patch:   ' + rootProject.ext.current_version_patch
+        println 'Distan:  ' + rootProject.ext.commit_distance
+    }
+}
