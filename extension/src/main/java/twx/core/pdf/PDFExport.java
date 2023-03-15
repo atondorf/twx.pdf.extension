@@ -33,6 +33,13 @@ import com.thingworx.types.InfoTable;
 import com.thingworx.types.collections.ValueCollection;
 import com.thingworx.types.primitives.StringPrimitive;
 
+import com.lowagie.text.Document;
+import com.lowagie.text.Image;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfImportedPage;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.PdfWriter;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.Page.PdfOptions;
 import com.microsoft.playwright.options.LoadState;
@@ -76,8 +83,9 @@ public class PDFExport extends Resource {
 			@ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
 			@ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
 			@ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
-            @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1024" }) Integer pageWidth,
-            @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale
+            @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1280" }) Integer pageWidth,
+            @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
+			@ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING") String margin
 	) throws Exception {
         // get the full path of the 
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
@@ -90,10 +98,13 @@ public class PDFExport extends Resource {
         if( localeName == "" ) {
             localeName = Locale.getDefault().toLanguageTag();
         }
-        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageScale );
+        if( margin == "" ) {
+            margin = "10px";
+        }
+        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageScale, margin );
     }
 
-    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, double pageScale ) {
+    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, double pageScale, String margin ) {
         try ( Playwright playwright = Playwright.create() ) {
             // creating the Browser ... 
             Browser browser = playwright.chromium().launch( new BrowserType.LaunchOptions()
@@ -104,7 +115,7 @@ public class PDFExport extends Resource {
             BrowserContext  context = browser.newContext( new Browser.NewContextOptions()
                 .setLocale(localeName)
                 .setTimezoneId(timeZoneName)
-                .setViewportSize(pageWidth, 800 )
+                .setViewportSize(pageWidth, 1024 )
             );
 
             Map<String, String> headers = new HashMap<String, String>();
@@ -118,6 +129,7 @@ public class PDFExport extends Resource {
             page.waitForLoadState(LoadState.NETWORKIDLE);
             page.pdf( new Page.PdfOptions()
                 .setPath( Paths.get(filePath) )
+                .setMargin( new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
                 .setPrintBackground(true)
                 .setScale(pageScale)
                 .setLandscape(false)
@@ -129,5 +141,71 @@ public class PDFExport extends Resource {
             logger.error( err.getMessage() );
         }
     }
+
+    @ThingworxServiceDefinition(name = "MergePDFs", description = "Takes an InfoTable of PDF filenames in the given FileRepository and merges them into a single PDF.")
+	@ThingworxServiceResult(name = "Result", description = "Contains error message in case of error.", baseType = "STRING")
+	public String MergePDFs(
+			@ThingworxServiceParameter(name = "Filenames", description = "List of PDF filenames to merge together.", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList"}) InfoTable filenames, 
+			@ThingworxServiceParameter(name = "OutputFileName", description = "Name of the merged PDF.", baseType = "STRING") String OutputFileName, 
+			@ThingworxServiceParameter(name = "FileRepository", description = "The name of the file repository to use.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository"}) String FileRepository
+	)
+	{
+		String str_Result = "Success";
+		Document document = null;
+		OutputStream out = null;
+		
+		//Get the File Repository
+		FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(FileRepository);	
+		try 
+		{
+			filerepo.processServiceRequest("GetDirectoryStructure", null);
+			//Set up the output stream for the merged PDF
+			out = new FileOutputStream(new File(filerepo.getRootPath() + File.separator + OutputFileName));
+			document = new Document(PageSize.A4, 10, 10, 10, 10);
+			PdfWriter writer = PdfWriter.getInstance(document, out);
+			document.open();
+			PdfContentByte cb = writer.getDirectContent();
+			//Loop through the given PDFs that will be merged
+			for(ValueCollection row : filenames.getRows())
+	        {
+	            String filename = row.getStringValue("item");
+	            InputStream is = new FileInputStream(new File(filerepo.getRootPath() + File.separator + filename));
+	            PdfReader reader = new PdfReader(is);
+	            //Write the pages from the to-be-merged PDFs to the Output PDF
+	            for(int i = 1; i <= reader.getNumberOfPages(); i++)
+	            {
+	            	document.newPage();
+	            	PdfImportedPage page = writer.getImportedPage(reader, i);
+	            	cb.addTemplate(page, 0, 0);
+	            }
+	        }	
+		} 
+		catch (FileNotFoundException e) 
+		{
+			str_Result = "Unable to create output file.";
+			logger.error(str_Result, e);
+		} 
+		catch (Exception e) 
+		{
+			str_Result = "Unable to Get Directory Structure of File Repository: " + FileRepository;
+			logger.error(str_Result, e);
+		}
+		finally
+		{
+			try
+			{
+				//close all the output streams
+				out.flush();
+				document.close();
+				out.close();
+			}
+			catch (IOException e)
+			{
+				str_Result = "Unable to write PDF and close OutputStreams.";
+				logger.error(str_Result, e);
+			}
+		}
+		return str_Result;	
+	}
 
 }
