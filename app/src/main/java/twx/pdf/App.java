@@ -66,7 +66,7 @@ public class App {
             // page.wait(5000);
             page.pdf( new Page.PdfOptions()
                 .setPath( Paths.get("e:/temp/screenshot.pdf") )
-                // .setMargin( new Margin().setTop("10px") )
+                .setMargin( new Margin().setTop("50px").setBottom("50px").setLeft("50px").setRight("50px"))
                 .setPrintBackground(true)
                 .setScale(1)
                 .setLandscape(false)
