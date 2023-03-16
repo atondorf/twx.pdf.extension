@@ -17,69 +17,10 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.playwright.*;
-import com.microsoft.playwright.Page.PdfOptions;
-import com.microsoft.playwright.options.LoadState;
-import com.microsoft.playwright.options.Margin;
-import com.microsoft.playwright.options.Media;
-
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-
-
 public class App {
 
 	final static Logger logger  = LoggerFactory.getLogger(App.class);
-  
-    public static void PDF() {
-        try ( Playwright playwright = Playwright.create() ) {
-            // creating the Browser ... 
-            Browser browser = playwright.chromium().launch( new BrowserType.LaunchOptions()
-              .setChannel("msedge")
-              .setHeadless(false)
-              // .setSlowMo(50)
-            );
-
-            // creating the context ...
-            BrowserContext  context = browser.newContext( new Browser.NewContextOptions()
-                .setLocale("de-DE")
-                .setTimezoneId("Europe/Berlin")
-                .setViewportSize(1024, 800 )
-            );
-
-                
-            Map<String, String> headers = new HashMap<String, String>();
-            headers.put("appkey", "f826fd49-74ed-4062-b331-0ef8e1c523f1");  // << Wittenberg 
-            // headers.put("appkey", "c903d90d-fdeb-47b0-8d6f-073ffce172ea");  // << Linnich-Dev 9.3 
-            context.setExtraHTTPHeaders(headers);
-
-            Page page = context.newPage();
-            
-            page.navigate("https://dewittwxpas.sig.dom:8443/Thingworx/Runtime/index.html#mashup=TimeReportMashup&EntityName=P0044_FS7189");
-            page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));            
-            page.waitForLoadState(LoadState.NETWORKIDLE);
-//             page.waitFor
-           //  page.waitFor
-            // page.wait(5000);
-            page.pdf( new Page.PdfOptions()
-                .setPath( Paths.get("e:/temp/screenshot.pdf") )
-                .setMargin( new Margin().setTop("50px").setBottom("50px").setLeft("50px").setRight("50px"))
-                .setPrintBackground(true)
-                .setScale(1)
-                .setLandscape(false)
-                .setFormat("A4")
-            );
-            browser.close();
-        }     
-        catch(Exception err) {
-          logger.error( err.getMessage() );
-        }
-    }
-
-    
+   
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         var app 	= new App();
@@ -87,7 +28,7 @@ public class App {
         
         logger.info("---------- Start-App ----------");
         try {
-            app.PDF();
+
 		}
         catch(Exception ex) {
             logger.error(ex.getMessage());
