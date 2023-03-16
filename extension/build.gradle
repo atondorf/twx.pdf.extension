@@ -22,7 +22,6 @@ dependencies {
     implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
     implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
     implementation group: 'com.github.librepdf', name: 'openpdf', version: '1.3.26'
-    packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
     packageDependencies group: 'com.github.librepdf', name: 'openpdf', version: '1.3.26'
     implementation fileTree(dir: rootProject.ext.commonJarDir, include: ['*.jar'])
     packageDependencies fileTree(dir: rootProject.ext.localJarDir, include: ['*.jar'])
@@ -55,11 +54,16 @@ def updateMetadata() {
     // update the version number to current one ...
     xml.ExtensionPackages.ExtensionPackage.@packageVersion = rootProject.ext.base_version
     xml.ExtensionPackages.ExtensionPackage.@name = projectName
+    xml.ExtensionPackages.ExtensionPackage.@description     = rootProject.ext.packageDescription
+    xml.ExtensionPackages.ExtensionPackage.@vendor          = rootProject.ext.packageVendor
+    xml.ExtensionPackages.ExtensionPackage.@dependsOn       = rootProject.ext.packageDependsOn
+      
     // add dependency to own jar
     xml.ExtensionPackages.ExtensionPackage.JarResources[0]?.appendNode('FileResource', [type: 'JAR', file: project.ext.extensionJar])
 
     // add dependencies to required external jars
     for (File f: configurations.packageDependencies) {
+        // exception list ... to avoid version conflicts ...
         if (f.getName().startsWith('commons-codec') ||
             f.getName().startsWith('commons-io') ||
             f.getName().startsWith('commons-logging') ||
