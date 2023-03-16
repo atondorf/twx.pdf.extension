@@ -84,6 +84,7 @@ public class PDFExport extends Resource {
 			@ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
 			@ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
             @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1280" }) Integer pageWidth,
+            @ThingworxServiceParameter(name = "ScreenHeight", description = "", baseType = "INTEGER", aspects = {"defaultValue:1024" }) Integer pageHeight,
             @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
 			@ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING") String margin
 	) throws Exception {
@@ -101,10 +102,10 @@ public class PDFExport extends Resource {
         if( margin == "" ) {
             margin = "10px";
         }
-        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageScale, margin );
+        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageHeight, pageScale, margin );
     }
 
-    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, double pageScale, String margin ) {
+    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, Integer pageHeight, double pageScale, String margin ) {
         try ( Playwright playwright = Playwright.create() ) {
             // creating the Browser ... 
             Browser browser = playwright.chromium().launch( new BrowserType.LaunchOptions()
@@ -115,15 +116,16 @@ public class PDFExport extends Resource {
             BrowserContext  context = browser.newContext( new Browser.NewContextOptions()
                 .setLocale(localeName)
                 .setTimezoneId(timeZoneName)
-                .setViewportSize(pageWidth, 1024 )
+                .setViewportSize(pageWidth, pageHeight )
             );
 
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("appkey", appKey);
+            headers.put("sec-ch-ua-platform", "windows"); 
+            headers.put("sec-ch-ua", "\"Chromium\";v=\"92\", \"Microsoft Edge\";v=\"92\", \"GREASE\";v=\"99\""); 
             context.setExtraHTTPHeaders(headers);
 
-            Page page = context.newPage();
-            
+            Page page = context.newPage();            
             page.navigate(url);
             page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));            
             page.waitForLoadState(LoadState.NETWORKIDLE);
