@@ -86,7 +86,8 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1280" }) Integer pageWidth,
             @ThingworxServiceParameter(name = "ScreenHeight", description = "", baseType = "INTEGER", aspects = {"defaultValue:1024" }) Integer pageHeight,
             @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
-			@ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING") String margin
+			@ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING") String margin,
+			@ThingworxServiceParameter(name = "Landscape", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean landscape
 	) throws Exception {
         // get the full path of the 
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
@@ -102,10 +103,10 @@ public class PDFExport extends Resource {
         if( margin == "" ) {
             margin = "10px";
         }
-        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageHeight, pageScale, margin );
+        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageHeight, pageScale, margin, landscape );
     }
 
-    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, Integer pageHeight, double pageScale, String margin ) {
+    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, Integer pageHeight, double pageScale, String margin, Boolean landscape ) {
         try ( Playwright playwright = Playwright.create() ) {
             // creating the Browser ... 
             Browser browser = playwright.chromium().launch( new BrowserType.LaunchOptions()
@@ -136,6 +137,7 @@ public class PDFExport extends Resource {
                 .setScale(pageScale)
                 .setLandscape(false)
                 .setFormat("A4")
+                .setLandscape(landscape)
             );
             browser.close();
         }
