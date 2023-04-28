@@ -83,11 +83,13 @@ public class PDFExport extends Resource {
 			@ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
 			@ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
 			@ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
+			@ThingworxServiceParameter(name = "PageFormat", description = "", baseType = "STRING", aspects = {"defaultValue:'A4'" }) String pageFormat,
+			@ThingworxServiceParameter(name = "Landscape", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean landscape,
             @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1280" }) Integer pageWidth,
             @ThingworxServiceParameter(name = "ScreenHeight", description = "", baseType = "INTEGER", aspects = {"defaultValue:1024" }) Integer pageHeight,
             @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
-			@ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING") String margin,
-			@ThingworxServiceParameter(name = "Landscape", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean landscape
+			@ThingworxServiceParameter(name = "PrintBackground", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:true" }) Boolean printBackground,            
+			@ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING") String margin
 	) throws Exception {
         // get the full path of the 
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
@@ -103,10 +105,10 @@ public class PDFExport extends Resource {
         if( margin == "" ) {
             margin = "10px";
         }
-        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageHeight, pageScale, margin, landscape );
+        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageHeight, pageScale, margin, pageFormat, landscape, printBackground );
     }
 
-    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, Integer pageHeight, double pageScale, String margin, Boolean landscape ) {
+    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName, Integer pageWidth, Integer pageHeight, double pageScale, String margin, String pageFormat, Boolean landscape, Boolean printBackground ) {
         try ( Playwright playwright = Playwright.create() ) {
             // creating the Browser ... 
             Browser browser = playwright.chromium().launch( new BrowserType.LaunchOptions()
@@ -133,10 +135,9 @@ public class PDFExport extends Resource {
             page.pdf( new Page.PdfOptions()
                 .setPath( Paths.get(filePath) )
                 .setMargin( new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
-                .setPrintBackground(true)
+                .setPrintBackground(printBackground)
                 .setScale(pageScale)
-                .setLandscape(false)
-                .setFormat("A4")
+                .setFormat(pageFormat)
                 .setLandscape(landscape)
             );
             browser.close();
