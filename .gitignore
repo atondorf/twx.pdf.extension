@@ -40,3 +40,5 @@ lib/common/*.jar
 *.rar
 # Ignore Gradle build output directory
 build
+
+.fake

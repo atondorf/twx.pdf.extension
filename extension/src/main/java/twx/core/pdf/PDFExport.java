@@ -83,7 +83,7 @@ public class PDFExport extends Resource {
 			@ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
 			@ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
 			@ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
-			@ThingworxServiceParameter(name = "PageFormat", description = "", baseType = "STRING", aspects = {"defaultValue:'A4'" }) String pageFormat,
+			@ThingworxServiceParameter(name = "PageFormat", description = "", baseType = "STRING", aspects = {"defaultValue:A4" }) String pageFormat,
 			@ThingworxServiceParameter(name = "Landscape", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean landscape,
             @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1280" }) Integer pageWidth,
             @ThingworxServiceParameter(name = "ScreenHeight", description = "", baseType = "INTEGER", aspects = {"defaultValue:1024" }) Integer pageHeight,
