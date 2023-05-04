@@ -52,11 +52,10 @@ public class PDFExport extends Resource {
     private static Logger logger = LogUtilities.getInstance().getApplicationLogger(PDFExport.class);
     private static final long serialVersionUID = -1395344025018016841L;
 
-    @ThingworxServiceDefinition(name = "getAvailableTimeZones", description = "", category = "", isAllowOverride = false, aspects = {
-            "isAsync:false" })
-    @ThingworxServiceResult(name = "Result", description = "", baseType = "INFOTABLE", aspects = {
-            "isEntityDataShape:true", "dataShape:GenericStringList" })
-    public InfoTable getAvailableTimeZones() throws Exception {
+    @ThingworxServiceDefinition(name = "getAvailableTimeZones", description = "", category = "", isAllowOverride = false, aspects = {"isAsync:false" })
+    @ThingworxServiceResult(name = "Result", description = "", baseType = "INFOTABLE", aspects = {"isEntityDataShape:true", "dataShape:GenericStringList" })
+    public InfoTable getAvailableTimeZones() throws Exception 
+    {
         InfoTable it = InfoTableInstanceFactory.createInfoTableFromDataShape("GenericStringList");
         for (var id : DateTimeZone.getAvailableIDs()) {
             ValueCollection row = new ValueCollection();
@@ -66,11 +65,10 @@ public class PDFExport extends Resource {
         return it;
     }
 
-    @ThingworxServiceDefinition(name = "getAvailableLocales", description = "", category = "", isAllowOverride = false, aspects = {
-            "isAsync:false" })
-    @ThingworxServiceResult(name = "Result", description = "", baseType = "INFOTABLE", aspects = {
-            "isEntityDataShape:true", "dataShape:GenericStringList" })
-    public InfoTable getAvailableLocales() throws Exception {
+    @ThingworxServiceDefinition(name = "getAvailableLocales", description = "", category = "", isAllowOverride = false, aspects = {"isAsync:false" })
+    @ThingworxServiceResult(name = "Result", description = "", baseType = "INFOTABLE", aspects = {"isEntityDataShape:true", "dataShape:GenericStringList" })
+    public InfoTable getAvailableLocales() throws Exception 
+    {
         InfoTable it = InfoTableInstanceFactory.createInfoTableFromDataShape("GenericStringList");
         for (var id : Locale.getAvailableLocales()) {
             ValueCollection row = new ValueCollection();
@@ -96,7 +94,8 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "PrintBackground", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:true" }) Boolean printBackground,
             @ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING", aspects = {"defaultValue:10px" }) String margin,
             @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS)
-            throws Exception {
+            throws Exception 
+    {
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
