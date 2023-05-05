@@ -1,30 +1,20 @@
 # Introduction 
-This Thingworx Extension contains some helpers for concurrent operations and synchronisation.
-It's under development.
+This Thingworx Extension contains a Ressource to Print mashups as pdf.
+
+This library is based on the idea of:
+https://github.com/cbadici/thingworx-pdfgenerator-extension
+But it uses playwright instead of jbrowserdriver, so it's working with OpenJDK and Thingworx 9.x
 
 # Getting Started
-
+As the playwright libraries are very huge they are not packed to the extension zip file.
+You can manually upload them to your thingworx server, or uncomment the line in gradle file:
+28:     // packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
 
 # Build and Test
 To build the extension, use gradle.
-The gradle scripts expect the Thingworx Libraries to be available in a parallel folder named "_twx_libraries_9".
 
 # Gradle Targets
 The gradle script contains some special targets for the Extension.
-- extVersion:    Increases the Version Number of the Extension by 0.0.1
 - extPrepare:    Compiles the java files and prepares the extension structure 
 - extZip:        Creates the extension zip-File
-- extTwxDelete:  Deletes the extension in the connected Thingworx Instance
-- extTwxInstall: Installs the extension in the connected Thingworx Instance
 
-To make use of (de)installation using gradle, ensure you setup the parameters:
-- thingworxServerRoot
-- thingworxAppKey
-
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
-
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)

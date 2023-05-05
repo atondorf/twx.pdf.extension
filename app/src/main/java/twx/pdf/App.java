@@ -62,9 +62,7 @@ public class App {
             );
                 
             Map<String, String> headers = new HashMap<String, String>();
-            // headers.put("appkey", "3c82cf26-cf19-46bd-bcb5-b2a9e1067d47");  // << Wittenberg twxService_AK
-            headers.put("appkey", "254d5744-a984-4c39-8896-2388df046674");  // << Wittenberg de12650_AK
-            // headers.put("appkey", "c903d90d-fdeb-47b0-8d6f-073ffce172ea");  // << Linnich-Dev 9.3 
+            // headers.put("appkey", ""); 
             headers.put("sec-ch-ua-platform", "windows"); 
             headers.put("sec-ch-ua", "\"Chromium\";v=\"92\", \"Microsoft Edge\";v=\"92\", \"GREASE\";v=\"99\""); 
             context.setExtraHTTPHeaders(headers);
@@ -144,9 +142,8 @@ public class App {
         
         logger.info("---------- Start-App ----------");
         try {
-            // app.CreatePDF();
+            app.CreatePDF();
             app.MergePDF();
-
 		}
         catch(Exception ex) {
             logger.error(ex.getMessage());
