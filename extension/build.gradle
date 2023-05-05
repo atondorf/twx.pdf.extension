@@ -5,8 +5,8 @@ plugins {
 
 project.ext {
     projectName     = rootProject.name + '.' + project.name
-    extensionJar    = projectName + '_' + rootProject.ext.base_version + '.jar'
-    zipName         = projectName + '_' + rootProject.ext.base_version + '.zip'
+    extensionJar    = projectName + '_' + version + '.jar'
+    zipName         = projectName + '_' + version + '.zip'
     baseDir         = projectDir
     uiDir           = "${baseDir}/ui"                     // if there are any widgets
     configDir       = "${baseDir}/configfiles"            // folder location of the metadata.xml file

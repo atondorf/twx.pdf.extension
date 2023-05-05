@@ -100,6 +100,7 @@ public class PDFExport extends Resource {
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
         String filePath = filerepo.getRootPath() + File.separator + fileName;
+
         // default locale & timezone ...
         if (timeZoneName == "") {
             timeZoneName = TimeZone.getDefault().getID();
@@ -107,19 +108,10 @@ public class PDFExport extends Resource {
         if (localeName == "") {
             localeName = Locale.getDefault().toLanguageTag();
         }
-        this.renderPDF(url, twAppKey, filePath, localeName, timeZoneName, pageWidth, pageHeight, pageScale, margin,
-                pageFormat, landscape, printBackground, screenshotDelayMS);
-    }
-
-    public void renderPDF(String url, String appKey, String filePath, String localeName, String timeZoneName,
-            Integer pageWidth, Integer pageHeight, double pageScale, String margin, String pageFormat,
-            Boolean landscape, Boolean printBackground, int screenshotDelayMS) 
-    {
-        Browser browser = null;
 
         try (Playwright playwright = Playwright.create()) {
             // creating the Browser ...
-            browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
                     .setChannel("msedge")
                     .setHeadless(true));
             // creating the context ...
@@ -129,7 +121,7 @@ public class PDFExport extends Resource {
                     .setViewportSize(pageWidth, pageHeight));
 
             Map<String, String> headers = new HashMap<String, String>();
-            headers.put("appkey", appKey);
+            headers.put("appkey", twAppKey);
             headers.put("sec-ch-ua-platform", "windows");
             headers.put("sec-ch-ua", "\"Chromium\";v=\"92\", \"Microsoft Edge\";v=\"92\", \"GREASE\";v=\"99\"");
             context.setExtraHTTPHeaders(headers);
@@ -150,12 +142,12 @@ public class PDFExport extends Resource {
                     .setScale(pageScale)
                     .setFormat(pageFormat)
                     .setLandscape(landscape));
+            
+            browser.close();
+
         } catch (Exception err) {
             logger.error(err.getMessage());
-        } finally {
-            if (browser != null)
-                browser.close();
-        }
+        } 
     }
 
     @ThingworxServiceDefinition(name = "MergePDFs", description = "Takes an InfoTable of PDF filenames in the given FileRepository and merges them into a single PDF.")
@@ -179,8 +171,8 @@ public class PDFExport extends Resource {
             // Loop through the given PDFs that will be merged
             int f = 0;
             for (ValueCollection row : filenames.getRows()) {
-                String filename = row.getStringValue("item");
-                InputStream is = new FileInputStream(new File(filerepo.getRootPath() + File.separator + filename));
+                String filePath = filerepo.getRootPath() + File.separator + row.getStringValue("item");
+                InputStream is = new FileInputStream(new File(filePath));
                 PdfReader reader = new PdfReader(is);
                 int n = reader.getNumberOfPages();
 
@@ -201,17 +193,17 @@ public class PDFExport extends Resource {
                 }
                 f++;
             }
+            // step 5: we close the document
+            if (document != null)
+                document.close();
+
         } catch (FileNotFoundException e) {
             str_Result = "Unable to create output file.";
             logger.error(str_Result, e);
         } catch (Exception e) {
             str_Result = "Unable to Get Directory Structure of File Repository: " + FileRepository;
             logger.error(str_Result, e);
-        } finally {
-            // step 5: we close the document
-            if (document != null)
-                document.close();
-        }
+        } 
         return str_Result;
     }
 }
