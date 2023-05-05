@@ -1,7 +1,7 @@
 # Introduction 
 This Thingworx Extension contains a Ressource to Print mashups as pdf.
 
-This library is based on the idea of:
+This library is based on:
 https://github.com/cbadici/thingworx-pdfgenerator-extension
 But it uses playwright instead of jbrowserdriver, so it's working with OpenJDK and Thingworx 9.x
 
