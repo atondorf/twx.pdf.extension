@@ -5,8 +5,8 @@ plugins {
 
 project.ext {
     projectName     = rootProject.name + '.' + project.name
-    extensionJar    = projectName + '_' + rootProject.ext.base_version + '.jar'
-    zipName         = projectName + '_' + rootProject.ext.base_version + '.zip'
+    extensionJar    = projectName + '_' + version + '.jar'
+    zipName         = projectName + '_' + version + '.zip'
     baseDir         = projectDir
     uiDir           = "${baseDir}/ui"                     // if there are any widgets
     configDir       = "${baseDir}/configfiles"            // folder location of the metadata.xml file
@@ -21,10 +21,11 @@ dependencies {
     implementation group: 'org.json', name: 'json', version: '20171018'
     implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
     implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
-    implementation group: 'com.github.librepdf', name: 'openpdf', version: '1.3.26'
-    packageDependencies group: 'com.github.librepdf', name: 'openpdf', version: '1.3.26'
+    implementation group: 'com.github.librepdf', name: 'openpdf', version: '1.3.30'
+    packageDependencies group: 'com.github.librepdf', name: 'openpdf', version: '1.3.30'
     implementation fileTree(dir: rootProject.ext.commonJarDir, include: ['*.jar'])
     packageDependencies fileTree(dir: rootProject.ext.localJarDir, include: ['*.jar'])
+    // packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
 }
 
 distributions {

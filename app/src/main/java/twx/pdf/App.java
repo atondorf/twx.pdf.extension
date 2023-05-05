@@ -4,23 +4,137 @@
 package twx.pdf;
 
 import java.util.Scanner;
-import java.util.Date;
 import java.util.TimeZone;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.Calendar;
-
-import org.joda.time.*;
-import org.joda.time.format.*;
-import org.joda.time.Period;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+
+import com.lowagie.text.Document;
+import com.lowagie.text.Image;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfImportedPage;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.PdfWriter;
+import com.lowagie.text.pdf.PdfCopy;
+
+import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.LoadState;
+import com.microsoft.playwright.options.Margin;
+import com.microsoft.playwright.options.Media;
+
+import java.nio.file.Paths;
+import java.util.Map;
+import java.util.HashMap;
 
 public class App {
 
 	final static Logger logger  = LoggerFactory.getLogger(App.class);
    
+    public void CreatePDF() {
+        try ( Playwright playwright = Playwright.create() ) {
+            // creating the Browser ... 
+            Browser browser = playwright.chromium().launch( new BrowserType.LaunchOptions()
+              .setChannel("msedge")
+              .setHeadless(false)
+              // .setSlowMo(50)
+            );
+
+            // creating the context ...
+            BrowserContext  context = browser.newContext( new Browser.NewContextOptions()
+                .setLocale("de-DE")
+                .setTimezoneId("Europe/Berlin")
+                .setViewportSize(1024, 800 )
+            );
+                
+            Map<String, String> headers = new HashMap<String, String>();
+            // headers.put("appkey", ""); 
+            headers.put("sec-ch-ua-platform", "windows"); 
+            headers.put("sec-ch-ua", "\"Chromium\";v=\"92\", \"Microsoft Edge\";v=\"92\", \"GREASE\";v=\"99\""); 
+            context.setExtraHTTPHeaders(headers);
+
+            Page page = context.newPage();
+            page.navigate("https://google.de");
+            // page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));            
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+//             page.waitFor
+           //  page.waitFor
+            // page.wait(5000);
+            page.pdf( new Page.PdfOptions()
+                .setPath( Paths.get("e:/temp/screenshot1.pdf") )
+                .setMargin( new Margin().setTop("10px").setBottom("10px").setLeft("10px").setRight("10px"))
+                .setPrintBackground(false)
+                .setScale(1)
+                .setLandscape(false)
+                .setFormat("A4")
+            );
+            page.pdf( new Page.PdfOptions()
+                .setPath( Paths.get("e:/temp/screenshot2.pdf") )
+                .setMargin( new Margin().setTop("10px").setBottom("10px").setLeft("10px").setRight("10px"))
+                .setPrintBackground(false)
+                .setScale(1)
+                .setLandscape(true)
+                .setFormat("A4")
+            );
+            browser.close();
+        }     
+        catch(Exception err) {
+          logger.error( err.getMessage() );
+        }
+    }
+    
+    public void MergePDF() {
+        Document        document = null;
+        PdfCopy         writer = null;
+        try {
+            String[]    inFiles = { "e:/temp/screenshot1.pdf", "e:/temp/screenshot2.pdf" };
+            String      outFile = "e:/temp/merged.pdf";
+            int f = 0;
+            for( String fileName : inFiles )  {
+                InputStream is = new FileInputStream(new File(fileName));
+                PdfReader reader = new PdfReader(is);
+                int n = reader.getNumberOfPages();
+                
+                logger.info("File: {} has Pages: {}", fileName, n ); 
+                if (f == 0) {
+                    // step 1: creation of a document-object
+                    document = new Document(reader.getPageSizeWithRotation(1));
+                    // step 2: we create a writer that listens to the document
+                    writer = new PdfCopy(document, new FileOutputStream(outFile));
+                    // step 3: we open the document
+                    document.open();
+                }
+                // step 4: we add content
+                PdfImportedPage page;
+                for (int i = 0; i < n;) {
+                    ++i;
+                    page = writer.getImportedPage(reader, i);
+                    writer.addPage(page);
+                }
+                f++;
+            };
+            // step 5: we close the document
+            if (document != null)
+                document.close();
+        } catch (Exception e) {
+            logger.error("Exception", e);
+        }
+    }
+
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         var app 	= new App();
@@ -28,7 +142,8 @@ public class App {
         
         logger.info("---------- Start-App ----------");
         try {
-
+            app.CreatePDF();
+            app.MergePDF();
 		}
         catch(Exception ex) {
             logger.error(ex.getMessage());
