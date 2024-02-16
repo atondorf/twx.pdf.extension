@@ -1,11 +1,19 @@
 plugins {
-    id 'java'
-    id 'fr.brouillard.oss.gradle.jgitver' version '0.10.0-rc03'
+    id "java"
+    id "fr.brouillard.oss.gradle.jgitver" version "0.10.0-rc03"
+    // id "io.github.http-builder-ng.http-plugin" version "0.1.1"
 }
 
 jgitver {
     autoIncrementPatch true
     useDirty false
+    nonQualifierBranches "main"
+}
+
+java {
+  toolchain {
+    languageVersion.set(JavaLanguageVersion.of(11))
+  }
 }
 
 rootProject.ext {
@@ -29,6 +37,10 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+            allowInsecureProtocol = true
+        }
         flatDir {
             dirs rootProject.ext.commonJarDir
         }
@@ -46,5 +58,12 @@ tasks.register('versionInfo') {
         println 'Minor:   ' + rootProject.ext.current_version_minor
         println 'Patch:   ' + rootProject.ext.current_version_patch
         println 'Distan:  ' + rootProject.ext.commit_distance
+        println 'Calc:    ' + rootProject.ext.calculated_version
+        println 'Calc-S:  ' + rootProject.ext.calculated_version - "-*"
+
+        println 'N_Major: ' + rootProject.ext.next_major_version
+        println 'N_Minor: ' + rootProject.ext.next_minor_version
+        println 'N_Patch: ' + rootProject.ext.next_patch_version
+
     }
 }
