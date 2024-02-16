@@ -1,17 +1,24 @@
 plugins {
     id 'java-library'
-    id 'distribution'
+}
+
+java {
+  toolchain {
+    languageVersion.set(JavaLanguageVersion.of(11))
+  }
 }
 
 project.ext {
     projectName     = rootProject.name + '.' + project.name
-    extensionJar    = projectName + '_' + version + '.jar'
-    zipName         = projectName + '_' + version + '.zip'
+    extensionJar    = projectName + '_' + rootProject.ext.calculated_version + '.jar'
+    zipName         = projectName + '_' + rootProject.ext.calculated_version + '.zip'
     baseDir         = projectDir
     uiDir           = "${baseDir}/ui"                     // if there are any widgets
     configDir       = "${baseDir}/configfiles"            // folder location of the metadata.xml file
     entitiesDir     = "${baseDir}/configfiles/Entities"   // folder additional Entities file that you want to be included in the extension
     zipDir          = "${rootDir}/zip"                    // where to store the generated zip
+    twxURL          = "http://127.0.0.1:8080"
+    twxAppKey       = "dbb1dc78-5c11-4579-b677-eb26c66f15b6"
 }
 
 dependencies {
@@ -28,14 +35,6 @@ dependencies {
     // packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
 }
 
-distributions {
-    main {
-        distributionBaseName = 'someName'
-        contents {
-            from 'configfiles'
-        }
-    }
-}
 
 tasks.named('jar') {
     archiveFileName = extensionJar
@@ -53,9 +52,11 @@ def updateMetadata() {
     def parser = new XmlParser()
     def xml = parser.parse(file)
     // update the version number to current one ...
+    xml.ExtensionPackages.ExtensionPackage.@packageVersion  = rootProject.ext.calculated_version
+    xml.ExtensionPackages.ExtensionPackage.@buildNumber     = rootProject.ext.commit_distance
+    xml.ExtensionPackages.ExtensionPackage.@name            = projectName
     xml.ExtensionPackages.ExtensionPackage.@packageVersion = rootProject.ext.base_version
-    xml.ExtensionPackages.ExtensionPackage.@name = projectName
-    xml.ExtensionPackages.ExtensionPackage.@description     = rootProject.ext.packageDescription
+    xml.ExtensionPackages.ExtensionPackage.@buildNumber     = rootProject.ext.commit_distance
     xml.ExtensionPackages.ExtensionPackage.@vendor          = rootProject.ext.packageVendor
     xml.ExtensionPackages.ExtensionPackage.@dependsOn       = rootProject.ext.packageDependsOn
       
@@ -68,6 +69,8 @@ def updateMetadata() {
         if (f.getName().startsWith('commons-codec') ||
             f.getName().startsWith('commons-io') ||
             f.getName().startsWith('commons-logging') ||
+            f.getName().startsWith('commons-collections') ||
+            f.getName().startsWith('opencsv') ||
             f.getName().startsWith('netty') ||
             f.getName().startsWith('log4j') ||
             f.getName().startsWith('httpclient') ||
@@ -126,10 +129,6 @@ task twxZip(type : Zip, dependsOn: twxPrepare) {
     archiveFileName = zipName
     destinationDirectory = new File(project.ext.zipDir)
     from "${buildDir}/zip/"
-}
-
-tasks.named('distZip') {
-    println 'Distzip Config'
 }
 
 // overwrite test-task to use JUnit 5 ...
