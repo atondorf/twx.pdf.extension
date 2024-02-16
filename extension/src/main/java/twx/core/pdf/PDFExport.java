@@ -193,16 +193,27 @@ public class PDFExport extends Resource {
                 }
                 f++;
             }
+        } catch (FileNotFoundException e) {
+            str_Result = "Unable to create output file. Exception-Message: " + e.getMessage();
+            logger.error(str_Result, e);
+        } catch (Exception e) {
+            str_Result = "Unable to Get Directory Structure of File Repository: " + FileRepository + " Exception-Message: " +  e.getMessage();
+            logger.error(str_Result, e);
+        } 
+        finally {
+            try {
             // step 5: we close the document
             if (document != null)
                 document.close();
-
-        } catch (FileNotFoundException e) {
-            str_Result = "Unable to create output file.";
+                if( out != null )
+                    out.close();
+                if( writer != null )
+                    writer.close();
+            }
+            catch (Exception e) {
+                str_Result = "Caught exception on close! Exception-Message: " +  e.getMessage();
             logger.error(str_Result, e);
-        } catch (Exception e) {
-            str_Result = "Unable to Get Directory Structure of File Repository: " + FileRepository;
-            logger.error(str_Result, e);
+            }   
         } 
         return str_Result;
     }
