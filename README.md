@@ -8,18 +8,18 @@ But it uses playwright instead of jbrowserdriver, so it's working with OpenJDK a
 # Getting Started
 As the playwright libraries are very huge they are not packed to the extension zip file.
 You can manually upload them to your thingworx server, or uncomment the line in gradle file:
-28:     // packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
 
-# Build and Test
-To build the extension, use gradle.
+# Build
+Place the ThingWorx SDK jar-files in the lib/common and call gradle.
+If you want to inlude the huge "driver-bundle-1.31.0.jar" directly in the extension uncomment
+"// packageDependencies group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'" in "extension/build.gradle".
 
 # Gradle Targets
 The gradle script contains some special targets for the Extension.
 - extPrepare:    Compiles the java files and prepares the extension structure 
 - extZip:        Creates the extension zip-File
 
+# Todos
+- I would love to have a gradle target, that automatically uploads the extensio to a given test thingworx instance ... 
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+This Extension is provided as-is and without warranty or support.
