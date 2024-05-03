@@ -84,7 +84,7 @@ public class PDFExport extends Resource {
     public void CreatePDF(
             @ThingworxServiceParameter(name = "ServerAddress", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "STRING", aspects = {""}) String url,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
-            @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String fileName,
+            @ThingworxServiceParameter(name = "OutputFileName", description = "Name of the Output File without extension.", baseType = "STRING", aspects = {"defaultValue:Report" }) String OutputFileName,
             @ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
             @ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
             @ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
@@ -101,7 +101,10 @@ public class PDFExport extends Resource {
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
-        String filePath = filerepo.getRootPath() + File.separator + fileName + ".pdf";
+        if( OutputFileName.endsWith(".pdf")) {
+            OutputFileName = OutputFileName.substring(0, OutputFileName.length() - 4);
+        }
+        String filePath = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
 
         // default locale & timezone ...
         if (timeZoneName == "") {
@@ -156,7 +159,7 @@ public class PDFExport extends Resource {
     public void CreatePDFMultiURL(
             @ThingworxServiceParameter(name = "ServerAddresses", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList"}) InfoTable urls,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
-            @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String fileName,
+            @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String OutputFileName,
             @ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
             @ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
             @ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
@@ -173,8 +176,11 @@ public class PDFExport extends Resource {
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
-        String finalFilePath = filerepo.getRootPath() + File.separator + fileName + ".pdf";
-        String tmpFolderPath = "tmp_" + fileName;
+        if( OutputFileName.endsWith(".pdf")) {
+            OutputFileName = OutputFileName.substring(0, OutputFileName.length() - 4);
+        }
+        String finalFilePath = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
+        String tmpFolderPath = "tmp_" + OutputFileName;
         
         // default locale & timezone ...
         if (timeZoneName == "") {
@@ -238,7 +244,7 @@ public class PDFExport extends Resource {
             browser.close();
 
             // merge the pdf files ... 
-            this.MergePDFs(pdfFiles, fileName, fileRepository);
+            this.MergePDFs(pdfFiles, OutputFileName, fileRepository);
 
             Thread.sleep(100);
 
@@ -254,7 +260,7 @@ public class PDFExport extends Resource {
     @ThingworxServiceResult(name = "Result", description = "Contains error message in case of error.", baseType = "STRING")
     public String MergePDFs(
             @ThingworxServiceParameter(name = "Filenames", description = "List of PDF filenames to merge together.", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList" }) InfoTable filenames,
-            @ThingworxServiceParameter(name = "OutputFileName", description = "Name of the merged PDF.", baseType = "STRING") String OutputFileName,
+            @ThingworxServiceParameter(name = "OutputFileName", description = "Name of the Output File without extension.", baseType = "STRING") String OutputFileName,
             @ThingworxServiceParameter(name = "FileRepository", description = "The name of the file repository to use.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String FileRepository) 
     {
         String str_Result = "Success";
@@ -266,6 +272,9 @@ public class PDFExport extends Resource {
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(FileRepository);
         try {
             filerepo.processServiceRequest("GetDirectoryStructure", null);
+            if( OutputFileName.endsWith(".pdf")) {
+                OutputFileName = OutputFileName.substring(0, OutputFileName.length() - 4);
+            }
             String outFile = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
 
             // Loop through the given PDFs that will be merged
