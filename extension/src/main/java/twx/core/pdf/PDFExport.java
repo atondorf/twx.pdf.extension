@@ -24,11 +24,13 @@ import org.slf4j.LoggerFactory;
 import com.thingworx.data.util.InfoTableInstanceFactory;
 import com.thingworx.entities.utils.ThingUtilities;
 import com.thingworx.logging.LogUtilities;
+import com.thingworx.metadata.FieldDefinition;
 import com.thingworx.metadata.annotations.ThingworxServiceDefinition;
 import com.thingworx.metadata.annotations.ThingworxServiceParameter;
 import com.thingworx.metadata.annotations.ThingworxServiceResult;
 import com.thingworx.resources.Resource;
 import com.thingworx.things.repository.FileRepositoryThing;
+import com.thingworx.types.BaseTypes;
 import com.thingworx.types.InfoTable;
 import com.thingworx.types.collections.ValueCollection;
 import com.thingworx.types.primitives.StringPrimitive;
@@ -152,7 +154,7 @@ public class PDFExport extends Resource {
 
     @ThingworxServiceDefinition(name = "CreatePDFMultiURL", description = "Render multiple URLs to one PDF ... ")
     public void CreatePDFMultiURL(
-            @ThingworxServiceParameter(name = "ServerAddresses", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "STRING", aspects = {"dataShape:GenericStringList"}) InfoTable urls,
+            @ThingworxServiceParameter(name = "ServerAddresses", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList"}) InfoTable urls,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
             @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String fileName,
             @ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
@@ -172,11 +174,8 @@ public class PDFExport extends Resource {
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
         String finalFilePath = filerepo.getRootPath() + File.separator + fileName + ".pdf";
-        String tmpFolderPath = fileName;
+        String tmpFolderPath = "tmp_" + fileName;
         
-        // create a temp folder for the pdfs ... 
-        filerepo.CreateFolder(tmpFolderPath);
-
         // default locale & timezone ...
         if (timeZoneName == "") {
             timeZoneName = TimeZone.getDefault().getID();
@@ -202,12 +201,24 @@ public class PDFExport extends Resource {
             headers.put("sec-ch-ua", "\"Chromium\";v=\"92\", \"Microsoft Edge\";v=\"92\", \"GREASE\";v=\"99\"");
             context.setExtraHTTPHeaders(headers);
 
-            Page page = context.newPage();
-            Integer pdfId = 1;
-            for (ValueCollection row : urls.getRows() ) {
-                String url = row.getStringValue("item");
-                String filePath = filerepo.getRootPath() + File.separator + "tmp_" + pdfId + ".pdf";
+            // create a temp folder for the pdfs ... 
+            filerepo.CreateFolder(tmpFolderPath);
+            InfoTable pdfFiles = new InfoTable();
+            pdfFiles.addField(new FieldDefinition("item", BaseTypes.STRING));
 
+            Page page = context.newPage();
+            Integer pdfId = 0;
+            for (ValueCollection row : urls.getRows() ) {
+                pdfId++;
+                String url = row.getStringValue("item");
+                String filePath = filerepo.getRootPath() + File.separator + tmpFolderPath + File.separator + pdfId + ".pdf";
+
+                // store temp file for merge access ...
+                var pdfFile = new ValueCollection();
+                pdfFile.SetStringValue("item", tmpFolderPath + File.separator + pdfId + ".pdf" );
+                pdfFiles.addRow(pdfFile);
+
+                // navigate and add render PDF ... 
                 page.navigate(url);
                 page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
                 page.waitForLoadState(LoadState.NETWORKIDLE);
@@ -224,8 +235,13 @@ public class PDFExport extends Resource {
                         .setFormat(pageFormat)
                         .setLandscape(landscape));
             }
-
             browser.close();
+
+            // merge the pdf files ... 
+            this.MergePDFs(pdfFiles, fileName, fileRepository);
+
+            // finally delet the temp files ... 
+            filerepo.DeleteFolder(tmpFolderPath);
 
         } catch (Exception err) {
             logger.error(err.getMessage());
@@ -248,7 +264,7 @@ public class PDFExport extends Resource {
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(FileRepository);
         try {
             filerepo.processServiceRequest("GetDirectoryStructure", null);
-            String outFile = filerepo.getRootPath() + File.separator + OutputFileName;
+            String outFile = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
 
             // Loop through the given PDFs that will be merged
             int f = 0;
