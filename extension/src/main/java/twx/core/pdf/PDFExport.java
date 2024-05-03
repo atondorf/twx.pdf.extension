@@ -240,6 +240,8 @@ public class PDFExport extends Resource {
             // merge the pdf files ... 
             this.MergePDFs(pdfFiles, fileName, fileRepository);
 
+            Thread.sleep(100);
+
             // finally delet the temp files ... 
             filerepo.DeleteFolder(tmpFolderPath);
 
@@ -270,26 +272,29 @@ public class PDFExport extends Resource {
             int f = 0;
             for (ValueCollection row : filenames.getRows()) {
                 String filePath = filerepo.getRootPath() + File.separator + row.getStringValue("item");
-                InputStream is = new FileInputStream(new File(filePath));
-                PdfReader reader = new PdfReader(is);
-                int n = reader.getNumberOfPages();
+                try ( 
+                    InputStream is = new FileInputStream(new File(filePath));
+                    PdfReader reader = new PdfReader(is);
+                ) {
+                    int n = reader.getNumberOfPages();
 
-                if (f == 0) {
-                    // step 1: creation of a document-object
-                    document = new Document(reader.getPageSizeWithRotation(1));
-                    // step 2: we create a writer that listens to the document
-                    writer = new PdfCopy(document, new FileOutputStream(outFile));
-                    // step 3: we open the document
-                    document.open();
+                    if (f == 0) {
+                        // step 1: creation of a document-object
+                        document = new Document(reader.getPageSizeWithRotation(1));
+                        // step 2: we create a writer that listens to the document
+                        writer = new PdfCopy(document, new FileOutputStream(outFile));
+                        // step 3: we open the document
+                        document.open();
+                    }
+                    // step 4: we add content
+                    PdfImportedPage page;
+                    for (int i = 0; i < n;) {
+                        ++i;
+                        page = writer.getImportedPage(reader, i);
+                        writer.addPage(page);
+                    }
+                    f++;
                 }
-                // step 4: we add content
-                PdfImportedPage page;
-                for (int i = 0; i < n;) {
-                    ++i;
-                    page = writer.getImportedPage(reader, i);
-                    writer.addPage(page);
-                }
-                f++;
             }
         } catch (FileNotFoundException e) {
             str_Result = "Unable to create output file. Exception-Message: " + e.getMessage();
