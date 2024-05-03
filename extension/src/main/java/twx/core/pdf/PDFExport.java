@@ -24,11 +24,13 @@ import org.slf4j.LoggerFactory;
 import com.thingworx.data.util.InfoTableInstanceFactory;
 import com.thingworx.entities.utils.ThingUtilities;
 import com.thingworx.logging.LogUtilities;
+import com.thingworx.metadata.FieldDefinition;
 import com.thingworx.metadata.annotations.ThingworxServiceDefinition;
 import com.thingworx.metadata.annotations.ThingworxServiceParameter;
 import com.thingworx.metadata.annotations.ThingworxServiceResult;
 import com.thingworx.resources.Resource;
 import com.thingworx.things.repository.FileRepositoryThing;
+import com.thingworx.types.BaseTypes;
 import com.thingworx.types.InfoTable;
 import com.thingworx.types.collections.ValueCollection;
 import com.thingworx.types.primitives.StringPrimitive;
@@ -82,7 +84,7 @@ public class PDFExport extends Resource {
     public void CreatePDF(
             @ThingworxServiceParameter(name = "ServerAddress", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "STRING", aspects = {""}) String url,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
-            @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report.pdf" }) String fileName,
+            @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String fileName,
             @ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
             @ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
             @ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
@@ -99,7 +101,7 @@ public class PDFExport extends Resource {
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
-        String filePath = filerepo.getRootPath() + File.separator + fileName;
+        String filePath = filerepo.getRootPath() + File.separator + fileName + ".pdf";
 
         // default locale & timezone ...
         if (timeZoneName == "") {
@@ -150,6 +152,104 @@ public class PDFExport extends Resource {
         } 
     }
 
+    @ThingworxServiceDefinition(name = "CreatePDFMultiURL", description = "Render multiple URLs to one PDF ... ")
+    public void CreatePDFMultiURL(
+            @ThingworxServiceParameter(name = "ServerAddresses", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList"}) InfoTable urls,
+            @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
+            @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String fileName,
+            @ThingworxServiceParameter(name = "FileRepository", description = "Choose a file repository where the output file will be stored.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String fileRepository,
+            @ThingworxServiceParameter(name = "TimeZoneName", description = "Set a time zone to the broswer emulator. Please take a look at the GetAvailableTimezones service, to find available Timezones.", baseType = "STRING") String timeZoneName,
+            @ThingworxServiceParameter(name = "LocaleName", description = "", baseType = "STRING") String localeName,
+            @ThingworxServiceParameter(name = "PageFormat", description = "", baseType = "STRING", aspects = {"defaultValue:A4" }) String pageFormat,
+            @ThingworxServiceParameter(name = "Landscape", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean landscape,
+            @ThingworxServiceParameter(name = "ScreenWidth", description = "", baseType = "INTEGER", aspects = {"defaultValue:1280" }) Integer pageWidth,
+            @ThingworxServiceParameter(name = "ScreenHeight", description = "", baseType = "INTEGER", aspects = {"defaultValue:1024" }) Integer pageHeight,
+            @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
+            @ThingworxServiceParameter(name = "PrintBackground", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:true" }) Boolean printBackground,
+            @ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING", aspects = {"defaultValue:10px" }) String margin,
+            @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS)
+            throws Exception 
+    {
+        // get the full path of the
+        FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
+        filerepo.processServiceRequest("GetDirectoryStructure", null);
+        String finalFilePath = filerepo.getRootPath() + File.separator + fileName + ".pdf";
+        String tmpFolderPath = "tmp_" + fileName;
+        
+        // default locale & timezone ...
+        if (timeZoneName == "") {
+            timeZoneName = TimeZone.getDefault().getID();
+        }
+        if (localeName == "") {
+            localeName = Locale.getDefault().toLanguageTag();
+        }
+
+        try (Playwright playwright = Playwright.create()) {
+            // creating the Browser ...
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
+                    .setChannel("msedge")
+                    .setHeadless(true));
+            // creating the context ...
+            BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                    .setLocale(localeName)
+                    .setTimezoneId(timeZoneName)
+                    .setViewportSize(pageWidth, pageHeight));
+
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put("appkey", twAppKey);
+            headers.put("sec-ch-ua-platform", "windows");
+            headers.put("sec-ch-ua", "\"Chromium\";v=\"92\", \"Microsoft Edge\";v=\"92\", \"GREASE\";v=\"99\"");
+            context.setExtraHTTPHeaders(headers);
+
+            // create a temp folder for the pdfs ... 
+            filerepo.CreateFolder(tmpFolderPath);
+            InfoTable pdfFiles = new InfoTable();
+            pdfFiles.addField(new FieldDefinition("item", BaseTypes.STRING));
+
+            Page page = context.newPage();
+            Integer pdfId = 0;
+            for (ValueCollection row : urls.getRows() ) {
+                pdfId++;
+                String url = row.getStringValue("item");
+                String filePath = filerepo.getRootPath() + File.separator + tmpFolderPath + File.separator + pdfId + ".pdf";
+
+                // store temp file for merge access ...
+                var pdfFile = new ValueCollection();
+                pdfFile.SetStringValue("item", tmpFolderPath + File.separator + pdfId + ".pdf" );
+                pdfFiles.addRow(pdfFile);
+
+                // navigate and add render PDF ... 
+                page.navigate(url);
+                page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
+                page.waitForLoadState(LoadState.NETWORKIDLE);
+
+                if (screenshotDelayMS > 0) {
+                    Thread.sleep(screenshotDelayMS);
+                }
+
+                page.pdf(new Page.PdfOptions()
+                        .setPath( Paths.get(filePath) )
+                        .setMargin(new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
+                        .setPrintBackground(printBackground)
+                        .setScale(pageScale)
+                        .setFormat(pageFormat)
+                        .setLandscape(landscape));
+            }
+            browser.close();
+
+            // merge the pdf files ... 
+            this.MergePDFs(pdfFiles, fileName, fileRepository);
+
+            Thread.sleep(100);
+
+            // finally delet the temp files ... 
+            filerepo.DeleteFolder(tmpFolderPath);
+
+        } catch (Exception err) {
+            logger.error(err.getMessage());
+        } 
+    }
+
     @ThingworxServiceDefinition(name = "MergePDFs", description = "Takes an InfoTable of PDF filenames in the given FileRepository and merges them into a single PDF.")
     @ThingworxServiceResult(name = "Result", description = "Contains error message in case of error.", baseType = "STRING")
     public String MergePDFs(
@@ -166,32 +266,35 @@ public class PDFExport extends Resource {
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(FileRepository);
         try {
             filerepo.processServiceRequest("GetDirectoryStructure", null);
-            String outFile = filerepo.getRootPath() + File.separator + OutputFileName;
+            String outFile = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
 
             // Loop through the given PDFs that will be merged
             int f = 0;
             for (ValueCollection row : filenames.getRows()) {
                 String filePath = filerepo.getRootPath() + File.separator + row.getStringValue("item");
-                InputStream is = new FileInputStream(new File(filePath));
-                PdfReader reader = new PdfReader(is);
-                int n = reader.getNumberOfPages();
+                try ( 
+                    InputStream is = new FileInputStream(new File(filePath));
+                    PdfReader reader = new PdfReader(is);
+                ) {
+                    int n = reader.getNumberOfPages();
 
-                if (f == 0) {
-                    // step 1: creation of a document-object
-                    document = new Document(reader.getPageSizeWithRotation(1));
-                    // step 2: we create a writer that listens to the document
-                    writer = new PdfCopy(document, new FileOutputStream(outFile));
-                    // step 3: we open the document
-                    document.open();
+                    if (f == 0) {
+                        // step 1: creation of a document-object
+                        document = new Document(reader.getPageSizeWithRotation(1));
+                        // step 2: we create a writer that listens to the document
+                        writer = new PdfCopy(document, new FileOutputStream(outFile));
+                        // step 3: we open the document
+                        document.open();
+                    }
+                    // step 4: we add content
+                    PdfImportedPage page;
+                    for (int i = 0; i < n;) {
+                        ++i;
+                        page = writer.getImportedPage(reader, i);
+                        writer.addPage(page);
+                    }
+                    f++;
                 }
-                // step 4: we add content
-                PdfImportedPage page;
-                for (int i = 0; i < n;) {
-                    ++i;
-                    page = writer.getImportedPage(reader, i);
-                    writer.addPage(page);
-                }
-                f++;
             }
         } catch (FileNotFoundException e) {
             str_Result = "Unable to create output file. Exception-Message: " + e.getMessage();
