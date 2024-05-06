@@ -8,6 +8,7 @@ dependencies {
     implementation group: 'org.json', name: 'json', version: '20171018'
     implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.+'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.+'
+    implementation 'commons-io:commons-io:2.11.0'
     implementation fileTree(dir: rootProject.ext.commonJarDir, include: ['*.jar'])
     implementation fileTree(dir: rootProject.ext.localJarDir, include: ['*.jar'])
     implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'

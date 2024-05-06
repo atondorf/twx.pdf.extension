@@ -21,6 +21,8 @@ import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.io.FilenameUtils;
+
 import com.thingworx.data.util.InfoTableInstanceFactory;
 import com.thingworx.entities.utils.ThingUtilities;
 import com.thingworx.logging.LogUtilities;
@@ -101,10 +103,14 @@ public class PDFExport extends Resource {
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
-        if( OutputFileName.endsWith(".pdf")) {
-            OutputFileName = OutputFileName.substring(0, OutputFileName.length() - 4);
-        }
-        String filePath = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
+
+        // get the info of output ... 
+        String outPath = FilenameUtils.getFullPath(OutputFileName);
+        String outFile = FilenameUtils.getBaseName(OutputFileName);
+        String outExt  = FilenameUtils.getExtension(OutputFileName);
+        if( outExt.isEmpty() )
+            outExt = "pdf";
+        String finalPdfFilePath = filerepo.getRootPath() + File.separator + outPath + File.separator + outFile + "." + outExt;
 
         // default locale & timezone ...
         if (timeZoneName == "") {
@@ -141,7 +147,7 @@ public class PDFExport extends Resource {
             }
 
             page.pdf(new Page.PdfOptions()
-                    .setPath(Paths.get(filePath))
+                    .setPath(Paths.get(finalPdfFilePath))
                     .setMargin(new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
                     .setPrintBackground(printBackground)
                     .setScale(pageScale)
@@ -170,18 +176,26 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
             @ThingworxServiceParameter(name = "PrintBackground", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:true" }) Boolean printBackground,
             @ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING", aspects = {"defaultValue:10px" }) String margin,
-            @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS)
+            @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS,
+            @ThingworxServiceParameter(name = "KeepTempPDFs", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean keepTemp)
             throws Exception 
     {
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
-        if( OutputFileName.endsWith(".pdf")) {
-            OutputFileName = OutputFileName.substring(0, OutputFileName.length() - 4);
-        }
-        String finalFilePath = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
-        String tmpFolderPath = "tmp_" + OutputFileName;
-        
+
+        // get the info of output ... 
+        String outPath = FilenameUtils.getFullPath(OutputFileName);
+        String outFile = FilenameUtils.getBaseName(OutputFileName);
+        String outExt  = FilenameUtils.getExtension(OutputFileName);
+        if( outExt.isEmpty() )
+            outExt = "pdf";
+
+        String finalPdfFilePath = outPath + File.separator + outFile + "." + outExt;    //<< here it must be relative to repository ... 
+        String tempPdfFolderPath = outPath + File.separator +  "_" + outFile;
+        // get the full path of the
+        filerepo.CreateFolder(tempPdfFolderPath);
+
         // default locale & timezone ...
         if (timeZoneName == "") {
             timeZoneName = TimeZone.getDefault().getID();
@@ -208,7 +222,6 @@ public class PDFExport extends Resource {
             context.setExtraHTTPHeaders(headers);
 
             // create a temp folder for the pdfs ... 
-            filerepo.CreateFolder(tmpFolderPath);
             InfoTable pdfFiles = new InfoTable();
             pdfFiles.addField(new FieldDefinition("item", BaseTypes.STRING));
 
@@ -217,11 +230,11 @@ public class PDFExport extends Resource {
             for (ValueCollection row : urls.getRows() ) {
                 pdfId++;
                 String url = row.getStringValue("item");
-                String filePath = filerepo.getRootPath() + File.separator + tmpFolderPath + File.separator + pdfId + ".pdf";
+                String filePath = filerepo.getRootPath() + File.separator + tempPdfFolderPath + File.separator + pdfId + "." + outExt;
 
                 // store temp file for merge access ...
                 var pdfFile = new ValueCollection();
-                pdfFile.SetStringValue("item", tmpFolderPath + File.separator + pdfId + ".pdf" );
+                pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
                 pdfFiles.addRow(pdfFile);
 
                 // navigate and add render PDF ... 
@@ -244,12 +257,14 @@ public class PDFExport extends Resource {
             browser.close();
 
             // merge the pdf files ... 
-            this.MergePDFs(pdfFiles, OutputFileName, fileRepository);
+            this.MergePDFs(pdfFiles, finalPdfFilePath, fileRepository);
 
             Thread.sleep(100);
 
             // finally delet the temp files ... 
-            filerepo.DeleteFolder(tmpFolderPath);
+            if( !keepTemp ) {
+                filerepo.DeleteFolder(tempPdfFolderPath);
+            }
 
         } catch (Exception err) {
             logger.error(err.getMessage());
@@ -262,36 +277,39 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "Filenames", description = "List of PDF filenames to merge together.", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList" }) InfoTable filenames,
             @ThingworxServiceParameter(name = "OutputFileName", description = "Name of the Output File without extension.", baseType = "STRING") String OutputFileName,
             @ThingworxServiceParameter(name = "FileRepository", description = "The name of the file repository to use.", baseType = "THINGNAME", aspects = {"defaultValue:SystemRepository", "thingTemplate:FileRepository" }) String FileRepository) 
+            throws Exception
     {
+        FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(FileRepository);
+        filerepo.processServiceRequest("GetDirectoryStructure", null);
+
+        // get the info of output ... 
+        String outPath = FilenameUtils.getFullPath(OutputFileName);
+        String outFile = FilenameUtils.getBaseName(OutputFileName);
+        String outExt  = FilenameUtils.getExtension(OutputFileName);
+        if( outExt.isEmpty() )
+            outExt = "pdf";
+        String finalPdfFilePath = filerepo.getRootPath() + File.separator + outPath + File.separator + outFile + "." + outExt;
+
+        // Get the File Repository
         String str_Result = "Success";
         Document document = null;
         OutputStream out = null;
         PdfCopy writer = null;
-
-        // Get the File Repository
-        FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(FileRepository);
         try {
-            filerepo.processServiceRequest("GetDirectoryStructure", null);
-            if( OutputFileName.endsWith(".pdf")) {
-                OutputFileName = OutputFileName.substring(0, OutputFileName.length() - 4);
-            }
-            String outFile = filerepo.getRootPath() + File.separator + OutputFileName + ".pdf";
-
             // Loop through the given PDFs that will be merged
             int f = 0;
             for (ValueCollection row : filenames.getRows()) {
-                String filePath = filerepo.getRootPath() + File.separator + row.getStringValue("item");
+                String inputPdfFilePath = filerepo.getRootPath() + File.separator + row.getStringValue("item");
                 try ( 
-                    InputStream is = new FileInputStream(new File(filePath));
+                    InputStream is = new FileInputStream(new File(inputPdfFilePath));
                     PdfReader reader = new PdfReader(is);
                 ) {
                     int n = reader.getNumberOfPages();
-
                     if (f == 0) {
                         // step 1: creation of a document-object
                         document = new Document(reader.getPageSizeWithRotation(1));
                         // step 2: we create a writer that listens to the document
-                        writer = new PdfCopy(document, new FileOutputStream(outFile));
+                        writer = new PdfCopy(document, new FileOutputStream(finalPdfFilePath));
                         // step 3: we open the document
                         document.open();
                     }
