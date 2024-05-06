@@ -177,7 +177,7 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "PrintBackground", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:true" }) Boolean printBackground,
             @ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING", aspects = {"defaultValue:10px" }) String margin,
             @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS,
-            @ThingworxServiceParameter(name = "KeepTemp", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean keepTemp)
+            @ThingworxServiceParameter(name = "KeepTempPDFs", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean keepTemp)
             throws Exception 
     {
         // get the full path of the
