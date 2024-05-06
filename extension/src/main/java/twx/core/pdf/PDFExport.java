@@ -176,7 +176,8 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "ScreenScale", description = "", baseType = "NUMBER", aspects = {"defaultValue:1.0" }) Double pageScale,
             @ThingworxServiceParameter(name = "PrintBackground", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:true" }) Boolean printBackground,
             @ThingworxServiceParameter(name = "Margin", description = "", baseType = "STRING", aspects = {"defaultValue:10px" }) String margin,
-            @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS)
+            @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS,
+            @ThingworxServiceParameter(name = "KeepTemp", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean keepTemp)
             throws Exception 
     {
         // get the full path of the
@@ -261,7 +262,9 @@ public class PDFExport extends Resource {
             Thread.sleep(100);
 
             // finally delet the temp files ... 
-            filerepo.DeleteFolder(tempPdfFolderPath);
+            if( !keepTemp ) {
+                filerepo.DeleteFolder(tempPdfFolderPath);
+            }
 
         } catch (Exception err) {
             logger.error(err.getMessage());
