@@ -3,43 +3,26 @@
  */
 package twx.pdf;
 
+import org.apache.commons.io.FilenameUtils;
+
+import java.nio.file.Paths;
+import java.nio.file.Path;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.TimeZone;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimeZone;
-
-import com.lowagie.text.Document;
-import com.lowagie.text.Image;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.pdf.PdfContentByte;
-import com.lowagie.text.pdf.PdfImportedPage;
-import com.lowagie.text.pdf.PdfReader;
-import com.lowagie.text.pdf.PdfWriter;
-import com.lowagie.text.pdf.PdfCopy;
-
-import com.microsoft.playwright.*;
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.Margin;
-import com.microsoft.playwright.options.Media;
-
-import java.nio.file.Paths;
-import java.util.Map;
-import java.util.HashMap;
 
 public class App {
 
@@ -97,43 +80,17 @@ public class App {
         }
     }
     
-    public void MergePDF() {
-        Document        document = null;
-        PdfCopy         writer = null;
-        try {
-            String[]    inFiles = { "e:/temp/screenshot1.pdf", "e:/temp/screenshot2.pdf" };
-            String      outFile = "e:/temp/merged.pdf";
-            int f = 0;
-            for( String fileName : inFiles )  {
-                InputStream is = new FileInputStream(new File(fileName));
-                PdfReader reader = new PdfReader(is);
-                int n = reader.getNumberOfPages();
-                
-                logger.info("File: {} has Pages: {}", fileName, n ); 
-                if (f == 0) {
-                    // step 1: creation of a document-object
-                    document = new Document(reader.getPageSizeWithRotation(1));
-                    // step 2: we create a writer that listens to the document
-                    writer = new PdfCopy(document, new FileOutputStream(outFile));
-                    // step 3: we open the document
-                    document.open();
-                }
-                // step 4: we add content
-                PdfImportedPage page;
-                for (int i = 0; i < n;) {
-                    ++i;
-                    page = writer.getImportedPage(reader, i);
-                    writer.addPage(page);
-                }
-                f++;
-            };
-            // step 5: we close the document
-            if (document != null)
-                document.close();
-        } catch (Exception e) {
-            logger.error("Exception", e);
-        }
+    void fileNameParse(String fileName) {
+        Path p = Paths.get(fileName);
+
+        logger.info("Path: {}", FilenameUtils.getFullPath(fileName));
+        logger.info("Name: {}", FilenameUtils.getBaseName(fileName) );
+        logger.info("Extension: {}", FilenameUtils.getExtension(fileName) );
+
+        if( FilenameUtils.getExtension(fileName).isEmpty() ) 
+            logger.info("Extension: {}", "Is Empty");
     }
+    
 
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
@@ -142,8 +99,7 @@ public class App {
         
         logger.info("---------- Start-App ----------");
         try {
-            app.CreatePDF();
-            app.MergePDF();
+            app.fileNameParse("p1/p2/test.app");
 		}
         catch(Exception ex) {
             logger.error(ex.getMessage());
