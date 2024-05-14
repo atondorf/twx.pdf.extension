@@ -232,11 +232,6 @@ public class PDFExport extends Resource {
                 String url = row.getStringValue("item");
                 String filePath = filerepo.getRootPath() + File.separator + tempPdfFolderPath + File.separator + pdfId + "." + outExt;
 
-                // store temp file for merge access ...
-                var pdfFile = new ValueCollection();
-                pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
-                pdfFiles.addRow(pdfFile);
-
                 // navigate and add render PDF ... 
                 page.navigate(url);
                 page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
@@ -253,6 +248,12 @@ public class PDFExport extends Resource {
                         .setScale(pageScale)
                         .setFormat(pageFormat)
                         .setLandscape(landscape));
+
+                // store temp file for merge access ...
+                var pdfFile = new ValueCollection();
+                pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
+                pdfFiles.addRow(pdfFile);
+                
             }
             browser.close();
 

@@ -27,6 +27,7 @@ dependencies {
     // this way you can get jars from a central repository ...
     implementation group: 'org.json', name: 'json', version: '20171018'
     implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.6'
     implementation group: 'com.microsoft.playwright', name: 'playwright', version: '1.31.0'
     implementation group: 'com.github.librepdf', name: 'openpdf', version: '1.3.30'
     packageDependencies group: 'com.github.librepdf', name: 'openpdf', version: '1.3.30'
