@@ -85,7 +85,8 @@ public class PDFExport extends Resource {
     }
 
     @ThingworxServiceDefinition(name = "CreatePDF", description = "")
-    public void CreatePDF(
+    @ThingworxServiceResult(name = "Result", description = "", baseType = "JSON", aspects = {})
+    public JSONObject CreatePDF(
             @ThingworxServiceParameter(name = "ServerAddress", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "STRING", aspects = {""}) String url,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
             @ThingworxServiceParameter(name = "OutputFileName", description = "Name of the Output File without extension.", baseType = "STRING", aspects = {"defaultValue:Report" }) String OutputFileName,
@@ -102,6 +103,11 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS)
             throws Exception 
     {
+        // prepare Result ... 
+        JSONObject result       = new JSONObject();
+        JSONArray  renderLog    = new JSONArray();
+        result.put("Log", renderLog);
+
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
@@ -133,6 +139,9 @@ public class PDFExport extends Resource {
                     .setTimezoneId(timeZoneName)
                     .setViewportSize(pageWidth, pageHeight));
 
+            // increase Timeout ... 
+            context.setDefaultTimeout(120000);
+
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("appkey", twAppKey);
             headers.put("sec-ch-ua-platform", "windows");
@@ -161,9 +170,11 @@ public class PDFExport extends Resource {
         } catch (Exception err) {
             logger.error(err.getMessage());
         } 
+        return result;
     }
 
     @ThingworxServiceDefinition(name = "CreatePDFMultiURL", description = "Render multiple URLs to one PDF ... ")
+    @ThingworxServiceResult(name = "Result", description = "", baseType = "JSON", aspects = {})
     public JSONObject CreatePDFMultiURL(
             @ThingworxServiceParameter(name = "ServerAddresses", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList"}) InfoTable urls,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
@@ -218,11 +229,15 @@ public class PDFExport extends Resource {
             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
                     .setChannel("msedge")
                     .setHeadless(true));
+
             // creating the context ...
             BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                     .setLocale(localeName)
                     .setTimezoneId(timeZoneName)
                     .setViewportSize(pageWidth, pageHeight));
+
+            // increase Timeout ... 
+            context.setDefaultTimeout(120000);
 
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("appkey", twAppKey);
