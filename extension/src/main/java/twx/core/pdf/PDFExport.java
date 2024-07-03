@@ -232,28 +232,40 @@ public class PDFExport extends Resource {
                 String url = row.getStringValue("item");
                 String filePath = filerepo.getRootPath() + File.separator + tempPdfFolderPath + File.separator + pdfId + "." + outExt;
 
-                // navigate and add render PDF ... 
-                page.navigate(url);
-                page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
-                page.waitForLoadState(LoadState.NETWORKIDLE);
+                try {
+                    // navigate and add render PDF ... 
+                    Response response = page.navigate(url);
+                    if( response != null && response.ok() ) {
+                        page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
+                        page.waitForLoadState(LoadState.NETWORKIDLE);
 
-                if (screenshotDelayMS > 0) {
-                    Thread.sleep(screenshotDelayMS);
+                        if (screenshotDelayMS > 0) {
+                            Thread.sleep(screenshotDelayMS);
+                        }
+
+                        byte[] pdfBytes = page.pdf(new Page.PdfOptions()
+                                .setPath( Paths.get(filePath) )
+                                .setMargin(new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
+                                .setPrintBackground(printBackground)
+                                .setScale(pageScale)
+                                .setFormat(pageFormat)
+                                .setLandscape(landscape));
+                        
+                        if( pdfBytes != null ) {
+                            // store temp file for merge access ...
+                            var pdfFile = new ValueCollection();
+                            pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
+                            pdfFiles.addRow(pdfFile);
+                        } else {
+                            logger.error("Bad response from page url: {}", url );
+                        }
+                    } else {
+                        logger.error("Bad response from page url: {}", url );
+                    }
                 }
-
-                page.pdf(new Page.PdfOptions()
-                        .setPath( Paths.get(filePath) )
-                        .setMargin(new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
-                        .setPrintBackground(printBackground)
-                        .setScale(pageScale)
-                        .setFormat(pageFormat)
-                        .setLandscape(landscape));
-
-                // store temp file for merge access ...
-                var pdfFile = new ValueCollection();
-                pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
-                pdfFiles.addRow(pdfFile);
-                
+                catch(PlaywrightException ex) {
+                    logger.error("Caught exception rendering url: {} - Exception: {}", url, ex );
+                }
             }
             browser.close();
 
