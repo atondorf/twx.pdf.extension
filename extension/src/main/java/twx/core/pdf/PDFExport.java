@@ -193,9 +193,11 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "KeepTempPDFs", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean keepTemp)
             throws Exception 
     {
+        var ts_start = new DateTime();
+
         JSONObject result       = new JSONObject();
         JSONArray  renderLog    = new JSONArray();
-        result.put("Log", renderLog);
+        result.put("Logging", renderLog);
 
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
@@ -210,6 +212,7 @@ public class PDFExport extends Resource {
 
         String finalPdfFilePath = outPath + File.separator + outFile + "." + outExt;    //<< here it must be relative to repository ... 
         String tempPdfFolderPath = outPath + File.separator +  "_" + outFile;
+        
         // get the full path of the
         filerepo.CreateFolder(tempPdfFolderPath);
 
@@ -222,6 +225,10 @@ public class PDFExport extends Resource {
         }
         
         // logging in result JSON ... 
+        result.put( "finalPdfFilePath", finalPdfFilePath );
+        result.put( "tempPdfFolderPath", tempPdfFolderPath );
+        result.put( "timeZoneName", timeZoneName );
+        result.put( "localeName", localeName );
         renderLog.put( this.createLogEntry("Creating Playwright Interface") );
 
         try (Playwright playwright = Playwright.create()) {
@@ -325,10 +332,14 @@ public class PDFExport extends Resource {
             if( !keepTemp ) {
                 filerepo.DeleteFolder(tempPdfFolderPath);
             }
-
         } catch (Exception err) {
+            renderLog.put( this.createLogEntry("Caught Error: " + err.getMessage() ) );
             logger.error(err.getMessage());
         } 
+        // final logging ... 
+        long elapsed = new DateTime().getMillis() - ts_start.getMillis();
+        renderLog.put( this.createLogEntry("PDF Rendering Finished!") );
+        result.put( "elapsed_ms", elapsed );
         return result;
     }
 
@@ -409,14 +420,9 @@ public class PDFExport extends Resource {
         return str_Result;
     }
 
-
-    protected JSONObject createLogEntry( String text ) {
-        JSONObject obj = new JSONObject();
-
+    protected String createLogEntry( String text ) {
         DateTimeZone tz = DateTimeZone.getDefault();
-        obj.put("TS", new DateTime().withZone(tz).toString() );
-        obj.put("Text", text );
-        return obj;
-
+        String ts = new DateTime().withZone(tz).toString();
+        return ts + " -  " + text;
     }
 }
