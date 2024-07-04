@@ -17,7 +17,8 @@ import java.util.TimeZone;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,7 @@ import com.thingworx.things.repository.FileRepositoryThing;
 import com.thingworx.types.BaseTypes;
 import com.thingworx.types.InfoTable;
 import com.thingworx.types.collections.ValueCollection;
+import com.thingworx.types.primitives.DatetimePrimitive;
 import com.thingworx.types.primitives.StringPrimitive;
 
 import com.lowagie.text.Document;
@@ -83,7 +85,8 @@ public class PDFExport extends Resource {
     }
 
     @ThingworxServiceDefinition(name = "CreatePDF", description = "")
-    public void CreatePDF(
+    @ThingworxServiceResult(name = "Result", description = "", baseType = "JSON", aspects = {})
+    public JSONObject CreatePDF(
             @ThingworxServiceParameter(name = "ServerAddress", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "STRING", aspects = {""}) String url,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
             @ThingworxServiceParameter(name = "OutputFileName", description = "Name of the Output File without extension.", baseType = "STRING", aspects = {"defaultValue:Report" }) String OutputFileName,
@@ -100,6 +103,11 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "ScreenshotDelayMS", description = "Add a delay before taking the screenshot in ms", baseType = "INTEGER", aspects = {"defaultValue:0" }) Integer screenshotDelayMS)
             throws Exception 
     {
+        // prepare Result ... 
+        JSONObject result       = new JSONObject();
+        JSONArray  renderLog    = new JSONArray();
+        result.put("Log", renderLog);
+
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
@@ -131,6 +139,9 @@ public class PDFExport extends Resource {
                     .setTimezoneId(timeZoneName)
                     .setViewportSize(pageWidth, pageHeight));
 
+            // increase Timeout ... 
+            context.setDefaultTimeout(120000);
+
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("appkey", twAppKey);
             headers.put("sec-ch-ua-platform", "windows");
@@ -159,10 +170,12 @@ public class PDFExport extends Resource {
         } catch (Exception err) {
             logger.error(err.getMessage());
         } 
+        return result;
     }
 
     @ThingworxServiceDefinition(name = "CreatePDFMultiURL", description = "Render multiple URLs to one PDF ... ")
-    public void CreatePDFMultiURL(
+    @ThingworxServiceResult(name = "Result", description = "", baseType = "JSON", aspects = {})
+    public JSONObject CreatePDFMultiURL(
             @ThingworxServiceParameter(name = "ServerAddresses", description = "The address must be ending in /Runtime/index.html#mashup=mashup_name. It will not work with Thingworx/Mashups/mashup_name", baseType = "INFOTABLE", aspects = {"dataShape:GenericStringList"}) InfoTable urls,
             @ThingworxServiceParameter(name = "AppKey", description = "AppKey", baseType = "STRING") String twAppKey,
             @ThingworxServiceParameter(name = "OutputFileName", description = "", baseType = "STRING", aspects = {"defaultValue:Report" }) String OutputFileName,
@@ -180,6 +193,12 @@ public class PDFExport extends Resource {
             @ThingworxServiceParameter(name = "KeepTempPDFs", description = "", baseType = "BOOLEAN", aspects = {"defaultValue:false" }) Boolean keepTemp)
             throws Exception 
     {
+        var ts_start = new DateTime();
+
+        JSONObject result       = new JSONObject();
+        JSONArray  renderLog    = new JSONArray();
+        result.put("Logging", renderLog);
+
         // get the full path of the
         FileRepositoryThing filerepo = (FileRepositoryThing) ThingUtilities.findThing(fileRepository);
         filerepo.processServiceRequest("GetDirectoryStructure", null);
@@ -193,6 +212,7 @@ public class PDFExport extends Resource {
 
         String finalPdfFilePath = outPath + File.separator + outFile + "." + outExt;    //<< here it must be relative to repository ... 
         String tempPdfFolderPath = outPath + File.separator +  "_" + outFile;
+        
         // get the full path of the
         filerepo.CreateFolder(tempPdfFolderPath);
 
@@ -203,17 +223,28 @@ public class PDFExport extends Resource {
         if (localeName == "") {
             localeName = Locale.getDefault().toLanguageTag();
         }
+        
+        // logging in result JSON ... 
+        result.put( "finalPdfFilePath", finalPdfFilePath );
+        result.put( "tempPdfFolderPath", tempPdfFolderPath );
+        result.put( "timeZoneName", timeZoneName );
+        result.put( "localeName", localeName );
+        renderLog.put( this.createLogEntry("Creating Playwright Interface") );
 
         try (Playwright playwright = Playwright.create()) {
             // creating the Browser ...
             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
                     .setChannel("msedge")
                     .setHeadless(true));
+
             // creating the context ...
             BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                     .setLocale(localeName)
                     .setTimezoneId(timeZoneName)
                     .setViewportSize(pageWidth, pageHeight));
+
+            // increase Timeout ... 
+            context.setDefaultTimeout(120000);
 
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("appkey", twAppKey);
@@ -227,48 +258,89 @@ public class PDFExport extends Resource {
 
             Page page = context.newPage();
             Integer pdfId = 0;
+
+            // logging in result JSON ... 
+            renderLog.put( this.createLogEntry("Browser Started!") );
+
             for (ValueCollection row : urls.getRows() ) {
                 pdfId++;
                 String url = row.getStringValue("item");
                 String filePath = filerepo.getRootPath() + File.separator + tempPdfFolderPath + File.separator + pdfId + "." + outExt;
+            
+                // logging in result JSON ... 
+                renderLog.put( this.createLogEntry("ID: " + pdfId.toString() + " Browsing URL: " + url) );
 
-                // store temp file for merge access ...
-                var pdfFile = new ValueCollection();
-                pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
-                pdfFiles.addRow(pdfFile);
+                try {
+                    // navigate and add render PDF ... 
+                    Response response = page.navigate(url);
+                    if( response != null && response.ok() ) {
+                        page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
+                        page.waitForLoadState(LoadState.NETWORKIDLE);
 
-                // navigate and add render PDF ... 
-                page.navigate(url);
-                page.emulateMedia(new Page.EmulateMediaOptions().setMedia(Media.PRINT));
-                page.waitForLoadState(LoadState.NETWORKIDLE);
+                        if (screenshotDelayMS > 0) {
+                            Thread.sleep(screenshotDelayMS);
+                        }
 
-                if (screenshotDelayMS > 0) {
-                    Thread.sleep(screenshotDelayMS);
+                        // logging in result JSON ... 
+                        renderLog.put( this.createLogEntry("ID: " + pdfId.toString() + " Render PDF to: " + tempPdfFolderPath + File.separator + pdfId + "." + outExt ) );
+
+                        byte[] pdfBytes = page.pdf(new Page.PdfOptions()
+                                .setPath( Paths.get(filePath) )
+                                .setMargin(new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
+                                .setPrintBackground(printBackground)
+                                .setScale(pageScale)
+                                .setFormat(pageFormat)
+                                .setLandscape(landscape));
+                        
+                        if( pdfBytes != null ) {
+                            // store temp file for merge access ...
+                            var pdfFile = new ValueCollection();
+                            pdfFile.SetStringValue("item", tempPdfFolderPath + File.separator + pdfId + "." + outExt );   // must be relative to repos ... 
+                            pdfFiles.addRow(pdfFile);
+                        } else {
+                            logger.error("Unable to create PDF is empty" );
+                            renderLog.put( this.createLogEntry("ID: " + pdfId.toString() + " Unable to create PDF is empty") );
+                        }
+                    } else {
+                        logger.error("Bad response from page url: {}", url );
+                        renderLog.put( this.createLogEntry("ID: " + pdfId.toString() + " Bad response from page") );                        
+                    }
+                    // logging in result JSON ... 
+                    renderLog.put( this.createLogEntry("ID: " + pdfId.toString() + " Finished ") );
                 }
-
-                page.pdf(new Page.PdfOptions()
-                        .setPath( Paths.get(filePath) )
-                        .setMargin(new Margin().setTop(margin).setBottom(margin).setLeft(margin).setRight(margin))
-                        .setPrintBackground(printBackground)
-                        .setScale(pageScale)
-                        .setFormat(pageFormat)
-                        .setLandscape(landscape));
+                catch(PlaywrightException ex) {
+                    logger.error("Caught exception rendering url: {} - Exception: {}", url, ex );
+                    // logging in result JSON ... 
+                    renderLog.put( this.createLogEntry("Caught Error: " + ex.toString() ) );
+                }
             }
+            // logging in result JSON ... 
+            renderLog.put( this.createLogEntry("All URLs rendered, closing browser") );
+
             browser.close();
+
+            renderLog.put( this.createLogEntry("Merge PDFs started") );
 
             // merge the pdf files ... 
             this.MergePDFs(pdfFiles, finalPdfFilePath, fileRepository);
 
             Thread.sleep(100);
 
+            renderLog.put( this.createLogEntry("Delete Temporary folder") );
+
             // finally delet the temp files ... 
             if( !keepTemp ) {
                 filerepo.DeleteFolder(tempPdfFolderPath);
             }
-
         } catch (Exception err) {
+            renderLog.put( this.createLogEntry("Caught Error: " + err.getMessage() ) );
             logger.error(err.getMessage());
         } 
+        // final logging ... 
+        long elapsed = new DateTime().getMillis() - ts_start.getMillis();
+        renderLog.put( this.createLogEntry("PDF Rendering Finished!") );
+        result.put( "elapsed_ms", elapsed );
+        return result;
     }
 
     @ThingworxServiceDefinition(name = "MergePDFs", description = "Takes an InfoTable of PDF filenames in the given FileRepository and merges them into a single PDF.")
@@ -346,5 +418,11 @@ public class PDFExport extends Resource {
             }   
         } 
         return str_Result;
+    }
+
+    protected String createLogEntry( String text ) {
+        DateTimeZone tz = DateTimeZone.getDefault();
+        String ts = new DateTime().withZone(tz).toString();
+        return ts + " -  " + text;
     }
 }
